@@ -1,0 +1,43 @@
+# Animal Messenger
+
+A messaging app where your pets carry the messages. Hatch animals, feed them and play with them, then send them off to friends. Fast animals deliver in minutes, a tortoise takes about a day, and clumsy animals sometimes drop the message or get lost and need to be found.
+
+This is the first playable prototype. It runs entirely on the phone with demo friends who write back, so the game can be tried before there's a server.
+
+## Try it
+
+You need [Node.js](https://nodejs.org) 20 or newer.
+
+```bash
+npm install
+npx expo start
+```
+
+Then scan the QR code with the **Expo Go** app on your phone (App Store or Google Play), or press `w` to open it in your browser.
+
+## What's in it
+
+- **Animals**: you start with Pip the pigeon, Shelly the tortoise and Waddles the duckling. Each has food, energy and happiness meters that change over real time.
+- **Care**: feed each animal (its favourite food fills more) and play fetch. Care builds bond, and a well-bonded animal is faster and less clumsy.
+- **Sending**: write a message, pick a friend and choose who carries it. You see the arrival time and mishap risk before sending.
+- **Mishaps**: a clumsy animal can drop the message (search the path or write a new one) or get lost (search the bushes, then send it on or give it a new message). A lost animal nobody looks for comes home after a day.
+- **Eggs**: earn one every 3 deliveries and for every rescue. Name it, pick a colour and hatch it. 15% of eggs are a rare fox.
+- **Testing tools**: on the Animals tab, skip ahead an hour or a day to see slow deliveries without waiting.
+
+## Code layout
+
+| Path | What it holds |
+| --- | --- |
+| `src/game/` | All game rules as plain TypeScript (species, timing, mishaps, eggs). No React, so it can move to a server later. |
+| `src/state/` | Keeps the game running every second and saves it on the device. |
+| `src/app/` | The screens ([Expo Router](https://docs.expo.dev/router/introduction/): each file is a screen). |
+| `src/ui/` | Shared colours and components. |
+
+```bash
+npm test           # game rule tests
+npm run typecheck  # TypeScript check
+```
+
+## Next steps
+
+Real accounts and messaging between real people need a backend. The plan is Supabase for sign-in, the database, scheduled delivery and push notifications, with the rules in `src/game/` running on the server.
