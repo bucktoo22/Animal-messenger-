@@ -5,6 +5,7 @@ import { canPlay, deliveryDuration, mishapChance } from '../../game/rules';
 import { FOODS, SPECIES } from '../../game/species';
 import { TRAITS } from '../../game/traits';
 import type { Animal, FoodId, TraitId } from '../../game/types';
+import type { Reaction } from '../../ui/animations';
 import { useGame } from '../../state/GameProvider';
 import {
   AnimalAvatar,
@@ -97,6 +98,8 @@ export default function AnimalScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { world, dispatch } = useGame();
   const [playing, setPlaying] = useState(false);
+  const [reaction, setReaction] = useState<Reaction>({ kind: 'hop', n: 0 });
+  const react = (kind: Reaction['kind']) => setReaction((r) => ({ kind, n: r.n + 1 }));
   const animal = world.animals.find((a) => a.id === id);
   if (!animal) return <Text style={styles.body}>This animal has wandered off.</Text>;
 
@@ -106,32 +109,21 @@ export default function AnimalScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: animal.name }} />
+      {/* The animal, its meters, then the things to do with it, so reactions stay in view. */}
       <Card style={{ alignItems: 'center' }}>
-        <AnimalAvatar animal={animal} size={110} />
+        <Pressable onPress={() => react('wiggle')} accessibilityLabel={`Pet ${animal.name}`}>
+          <AnimalAvatar animal={animal} size={110} reaction={reaction} />
+        </Pressable>
+        <Text style={styles.quiet}>Tap to give {animal.name} a pat</Text>
         <Text style={styles.h1}>{animal.name}</Text>
         <Text style={styles.quiet}>
           {species.name} · {species.rarity} · bond {animal.bond}
         </Text>
-        <Text style={[styles.body, { textAlign: 'center' }]}>{species.personality}</Text>
-        {(animal.traits ?? []).map((t) => (
-          <Text key={t} style={[styles.body, { textAlign: 'center' }]}>
-            {TRAITS[t].emoji} <Text style={{ fontWeight: '600' }}>{TRAITS[t].name}:</Text> {TRAITS[t].description}
-          </Text>
-        ))}
-        <Text style={styles.quiet}>
-          Delivers in about {formatDuration(deliveryDuration(animal))} · {Math.round(mishapChance(animal) * 100)}% mishap risk
-        </Text>
-      </Card>
-
-      <CustomiseCard
-        animal={animal}
-        onSave={(c) => dispatch({ type: 'customise', animalId: animal.id, ...c })}
-      />
-
-      <Card>
-        <Meter label="Food" value={animal.meters.hunger} />
-        <Meter label="Energy" value={animal.meters.energy} />
-        <Meter label="Happiness" value={animal.meters.happiness} />
+        <View style={{ alignSelf: 'stretch', gap: 8 }}>
+          <Meter label="Food" value={animal.meters.hunger} />
+          <Meter label="Energy" value={animal.meters.energy} />
+          <Meter label="Happiness" value={animal.meters.happiness} />
+        </View>
         <Text style={styles.quiet}>
           {busy ? 'Out on a delivery. Energy recovers once home.' : 'Resting at home: energy recovers over time.'}
         </Text>
@@ -147,7 +139,10 @@ export default function AnimalScreen() {
             <Pressable
               key={food}
               style={[styles.chip, food === species.favouriteFood && styles.chipSelected]}
-              onPress={() => dispatch({ type: 'feed', animalId: animal.id, food })}
+              onPress={() => {
+                dispatch({ type: 'feed', animalId: animal.id, food });
+                react('hop');
+              }}
               disabled={busy}
             >
               <Text style={{ color: busy ? colours.quiet : colours.ink }}>
@@ -166,6 +161,7 @@ export default function AnimalScreen() {
             onDone={() => {
               dispatch({ type: 'play', animalId: animal.id });
               setPlaying(false);
+              react('wiggle');
             }}
           />
         ) : (
@@ -176,6 +172,24 @@ export default function AnimalScreen() {
           />
         )}
       </Card>
+
+      <Card>
+        <Text style={styles.h2}>About {animal.name}</Text>
+        <Text style={styles.body}>{species.personality}</Text>
+        {(animal.traits ?? []).map((t) => (
+          <Text key={t} style={styles.body}>
+            {TRAITS[t].emoji} <Text style={{ fontWeight: '600' }}>{TRAITS[t].name}:</Text> {TRAITS[t].description}
+          </Text>
+        ))}
+        <Text style={styles.quiet}>
+          Delivers in about {formatDuration(deliveryDuration(animal))} · {Math.round(mishapChance(animal) * 100)}% mishap risk
+        </Text>
+      </Card>
+
+      <CustomiseCard
+        animal={animal}
+        onSave={(c) => dispatch({ type: 'customise', animalId: animal.id, ...c })}
+      />
     </ScrollView>
   );
 }

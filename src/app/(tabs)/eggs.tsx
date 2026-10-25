@@ -2,6 +2,7 @@ import { Link } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { DELIVERIES_PER_EGG } from '../../game/rules';
 import { useGame } from '../../state/GameProvider';
+import { Wobble } from '../../ui/animations';
 import { Card, styles } from '../../ui/components';
 
 export default function EggsScreen() {
@@ -20,7 +21,9 @@ export default function EggsScreen() {
           <Link key={egg.id} href={`/hatch/${egg.id}`} asChild>
             <Pressable>
               <Card style={{ alignItems: 'center', width: 140 }}>
-                <Text style={{ fontSize: 52 }}>🥚</Text>
+                <Wobble strength={5}>
+                  <Text style={{ fontSize: 52 }}>🥚</Text>
+                </Wobble>
                 <Text style={styles.h2}>Mystery egg</Text>
                 <Text style={styles.quiet}>Tap to hatch</Text>
               </Card>

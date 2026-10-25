@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ScrollView, Text, TextInput } from 'react-native';
 import { ANIMAL_COLOURS, SPECIES } from '../../game/species';
 import type { TraitId } from '../../game/types';
+import { Wobble } from '../../ui/animations';
 import { useGame } from '../../state/GameProvider';
 import { AnimalAvatar, Button, Card, ColourPicker, TraitPicker, colours, styles, traitLabel } from '../../ui/components';
 
@@ -24,7 +25,7 @@ export default function HatchScreen() {
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
         <Card style={{ alignItems: 'center' }}>
           <Text style={styles.h1}>It's a {s.name}!</Text>
-          <AnimalAvatar animal={hatched} size={120} />
+          <AnimalAvatar animal={hatched} size={120} reaction={{ kind: 'hop', n: 1 }} />
           <Text style={styles.h2}>
             {hatched.name} · {s.rarity}
           </Text>
@@ -42,7 +43,9 @@ export default function HatchScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Card style={{ alignItems: 'center' }}>
-        <Text style={{ fontSize: 80 }}>🥚</Text>
+        <Wobble>
+          <Text style={{ fontSize: 80 }}>🥚</Text>
+        </Wobble>
         <Text style={styles.quiet}>Something is wriggling inside...</Text>
       </Card>
       <Text style={styles.h2}>Name</Text>

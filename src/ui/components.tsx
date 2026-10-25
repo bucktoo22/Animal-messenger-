@@ -4,6 +4,7 @@ import { HOUR, MINUTE } from '../game/rules';
 import { ANIMAL_COLOURS, SPECIES } from '../game/species';
 import { MAX_TRAITS, TRAITS, TRAIT_LIST, clashes } from '../game/traits';
 import type { Animal, TraitId } from '../game/types';
+import { AnimatedAnimal, TravellingAnimal, type Reaction } from './animations';
 
 export const colours = {
   bg: '#FFF8EE',
@@ -26,7 +27,17 @@ export function formatDuration(ms: number): string {
   return m ? `${h}h ${m}m` : `${h}h`;
 }
 
-export function AnimalAvatar({ animal, size = 56 }: { animal: Pick<Animal, 'speciesId' | 'colour'>; size?: number }) {
+export function AnimalAvatar({
+  animal,
+  size = 56,
+  reaction,
+}: {
+  animal: Pick<Animal, 'speciesId' | 'colour'> & Partial<Pick<Animal, 'meters'>>;
+  size?: number;
+  reaction?: Reaction;
+}) {
+  const m = animal.meters;
+  const tired = !!m && (m.hunger + m.energy + m.happiness) / 3 < 35;
   return (
     <View
       style={{
@@ -38,7 +49,12 @@ export function AnimalAvatar({ animal, size = 56 }: { animal: Pick<Animal, 'spec
         justifyContent: 'center',
       }}
     >
-      <Text style={{ fontSize: size * 0.55 }}>{SPECIES[animal.speciesId].emoji}</Text>
+      <AnimatedAnimal
+        emoji={SPECIES[animal.speciesId].emoji}
+        size={size * 0.55}
+        mood={tired ? 'tired' : 'happy'}
+        reaction={reaction}
+      />
     </View>
   );
 }
@@ -94,10 +110,10 @@ export function JourneyPath({ progress, emoji, trouble }: { progress: number; em
     <View style={styles.path}>
       <View style={styles.pathLine} />
       <View style={[styles.pathDone, { width: `${progress * 100}%` }]} />
-      <Text style={[styles.pathAnimal, { left: `${progress * 100}%` }]}>
-        {emoji}
-        {trouble ? '❓' : ''}
-      </Text>
+      <View style={[styles.pathAnimalWrap, { left: `${progress * 100}%` }]}>
+        <TravellingAnimal emoji={emoji} trouble={trouble} style={styles.pathAnimal} />
+        {trouble ? <Text style={styles.pathAnimal}>❓</Text> : null}
+      </View>
       <Text style={[styles.pathEnd, { right: -4 }]}>🏠</Text>
     </View>
   );
@@ -148,7 +164,8 @@ export const styles = StyleSheet.create({
   path: { height: 32, justifyContent: 'center', marginHorizontal: 12, marginVertical: 4 },
   pathLine: { position: 'absolute', left: 0, right: 0, height: 3, borderRadius: 2, backgroundColor: colours.line },
   pathDone: { position: 'absolute', left: 0, height: 3, borderRadius: 2, backgroundColor: colours.accent },
-  pathAnimal: { position: 'absolute', fontSize: 22, marginLeft: -12 },
+  pathAnimalWrap: { position: 'absolute', flexDirection: 'row', marginLeft: -12 },
+  pathAnimal: { fontSize: 22 },
   pathEnd: { position: 'absolute', fontSize: 18 },
 });
 
