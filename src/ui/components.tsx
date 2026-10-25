@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { HOUR, MINUTE } from '../game/rules';
-import { SPECIES } from '../game/species';
-import type { Animal } from '../game/types';
+import { ANIMAL_COLOURS, SPECIES } from '../game/species';
+import { MAX_TRAITS, TRAITS, TRAIT_LIST, clashes } from '../game/traits';
+import type { Animal, TraitId } from '../game/types';
 
 export const colours = {
   bg: '#FFF8EE',
@@ -150,3 +151,54 @@ export const styles = StyleSheet.create({
   pathAnimal: { position: 'absolute', fontSize: 22, marginLeft: -12 },
   pathEnd: { position: 'absolute', fontSize: 18 },
 });
+
+export function ColourPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
+  return (
+    <View style={[styles.row, { flexWrap: 'wrap' }]}>
+      {ANIMAL_COLOURS.map((c) => (
+        <Pressable
+          key={c}
+          accessibilityLabel={`Colour ${c}`}
+          onPress={() => onChange(c)}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: c,
+            borderWidth: 3,
+            borderColor: c === value ? colours.ink : 'transparent',
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+/** Choose up to two traits. Traits that clash with a chosen one are greyed out. */
+export function TraitPicker({ value, onChange }: { value: TraitId[]; onChange: (t: TraitId[]) => void }) {
+  return (
+    <View style={{ gap: 8 }}>
+      {TRAIT_LIST.map((t) => {
+        const selected = value.includes(t.id);
+        const blocked = !selected && (value.length >= MAX_TRAITS || value.some((v) => clashes(v, t.id)));
+        return (
+          <Pressable
+            key={t.id}
+            disabled={blocked}
+            onPress={() => onChange(selected ? value.filter((v) => v !== t.id) : [...value, t.id])}
+            style={[styles.chip, { borderRadius: 12 }, selected && styles.chipSelected, blocked && { opacity: 0.4 }]}
+          >
+            <Text style={{ color: colours.ink, fontWeight: '600' }}>
+              {t.emoji} {t.name}
+            </Text>
+            <Text style={styles.quiet}>{t.description}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+export function traitLabel(traits: TraitId[] | undefined): string {
+  return (traits ?? []).map((t) => `${TRAITS[t].emoji} ${TRAITS[t].name}`).join('  ');
+}

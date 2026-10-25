@@ -1,6 +1,16 @@
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'legendary';
 
-export type SpeciesId = 'pigeon' | 'tortoise' | 'cat' | 'duckling' | 'fox';
+export type SpeciesId =
+  | 'pigeon'
+  | 'tortoise'
+  | 'cat'
+  | 'dog'
+  | 'duckling'
+  | 'axolotl'
+  | 'armadillo'
+  | 'fox'
+  | 'snowLeopard'
+  | 'giraffe';
 
 export interface Species {
   id: SpeciesId;
@@ -17,7 +27,18 @@ export interface Species {
   personality: string;
 }
 
-export type FoodId = 'seeds' | 'lettuce' | 'fish' | 'bread' | 'berries';
+export type TraitId =
+  | 'speedy'
+  | 'sleepy'
+  | 'careful'
+  | 'clumsy'
+  | 'brave'
+  | 'curious'
+  | 'foodie'
+  | 'playful'
+  | 'cheerful';
+
+export type FoodId = 'seeds' | 'lettuce' | 'fish' | 'bread' | 'berries' | 'meat' | 'worms' | 'ants' | 'leaves';
 
 export interface Meters {
   /** 0 to 100. Higher is better (100 = full). */
@@ -31,6 +52,8 @@ export interface Animal {
   speciesId: SpeciesId;
   name: string;
   colour: string;
+  /** Personality traits on top of the species, at most two. */
+  traits: TraitId[];
   meters: Meters;
   /** Game time when meters were last brought up to date. */
   metersUpdatedAt: number;

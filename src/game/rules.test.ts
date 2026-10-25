@@ -15,6 +15,8 @@ import {
   sendMessage,
   updateMeters,
 } from './rules';
+import { EGG_ODDS, SPECIES_LIST } from './species';
+import { randomTraits, validTraits } from './traits';
 import { createWorld, reduce, type Env, type World } from './world';
 
 const T0 = Date.UTC(2026, 9, 25, 12);
@@ -121,7 +123,14 @@ describe('mishaps', () => {
 describe('eggs', () => {
   it('follows the rarity odds', () => {
     expect(rollEggRarity(() => 0.5)).toBe('common');
-    expect(rollEggRarity(() => 0.9)).toBe('rare');
+    expect(rollEggRarity(() => 0.7)).toBe('uncommon');
+    expect(rollEggRarity(() => 0.95)).toBe('rare');
+  });
+
+  it('every rarity in the odds has species to hatch', () => {
+    for (const { rarity } of EGG_ODDS) {
+      expect(SPECIES_LIST.some((s) => s.rarity === rarity)).toBe(true);
+    }
   });
 });
 
@@ -153,5 +162,31 @@ describe('world', () => {
     w = reduce(w, { type: 'hatch', eggId: egg.id, name: 'Nibbles', colour: '#fff' }, env(T0, seq(0.4)));
     expect(w.eggs).toHaveLength(0);
     expect(w.animals.at(-1)!.name).toBe('Nibbles');
+  });
+});
+
+describe('personality traits', () => {
+  it('change speed, mishaps and meters', () => {
+    expect(deliveryDuration({ ...pigeon(), traits: ['speedy'] })).toBe(8 * MINUTE);
+    expect(mishapChance({ ...duckling(), traits: ['careful'] })).toBeCloseTo(0.09);
+    const foodie = { ...pigeon(), traits: ['foodie' as const], meters: { hunger: 10, energy: 100, happiness: 80 } };
+    expect(feed(foodie, 'seeds', T0).meters.hunger).toBe(60);
+    expect(updateMeters(foodie, T0 + 2 * HOUR).meters.hunger).toBe(0);
+  });
+
+  it('random traits never clash', () => {
+    for (let i = 0; i < 50; i++) expect(validTraits(randomTraits(Math.random))).toBe(true);
+    expect(validTraits(['speedy', 'sleepy'])).toBe(false);
+    expect(validTraits(['speedy', 'brave', 'cheerful'])).toBe(false);
+  });
+
+  it('lets you rename, recolour and change traits', () => {
+    let ids = 0;
+    const env: Env = { now: T0, rng: seq(0.5), newId: () => `c${ids++}` };
+    let w = createWorld(env);
+    const a = w.animals[0];
+    w = reduce(w, { type: 'customise', animalId: a.id, name: 'Zoom', colour: '#000', traits: ['brave'] }, env);
+    expect(w.animals[0]).toMatchObject({ name: 'Zoom', colour: '#000', traits: ['brave'] });
+    expect(() => reduce(w, { type: 'customise', animalId: a.id, traits: ['brave', 'curious'] }, env)).toThrow();
   });
 });

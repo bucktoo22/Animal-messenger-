@@ -1,11 +1,22 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { canPlay, deliveryDuration, mishapChance } from '../../game/rules';
 import { FOODS, SPECIES } from '../../game/species';
-import type { FoodId } from '../../game/types';
+import { TRAITS } from '../../game/traits';
+import type { Animal, FoodId, TraitId } from '../../game/types';
 import { useGame } from '../../state/GameProvider';
-import { AnimalAvatar, Button, Card, Meter, colours, formatDuration, styles } from '../../ui/components';
+import {
+  AnimalAvatar,
+  Button,
+  Card,
+  ColourPicker,
+  Meter,
+  TraitPicker,
+  colours,
+  formatDuration,
+  styles,
+} from '../../ui/components';
 
 const CATCHES_TO_WIN = 5;
 
@@ -39,6 +50,49 @@ function FetchGame({ emoji, onDone }: { emoji: string; onDone: () => void }) {
   );
 }
 
+/** Rename, recolour and change personality. */
+function CustomiseCard({ animal, onSave }: { animal: Animal; onSave: (c: { name: string; colour: string; traits: TraitId[] }) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(animal.name);
+  const [colour, setColour] = useState(animal.colour);
+  const [traits, setTraits] = useState<TraitId[]>(animal.traits ?? []);
+
+  if (!editing) {
+    return (
+      <Button
+        kind="secondary"
+        title="Change name, colour or personality"
+        onPress={() => {
+          setName(animal.name);
+          setColour(animal.colour);
+          setTraits(animal.traits ?? []);
+          setEditing(true);
+        }}
+      />
+    );
+  }
+  return (
+    <Card>
+      <AnimalAvatar animal={{ speciesId: animal.speciesId, colour }} size={72} />
+      <Text style={styles.h2}>Name</Text>
+      <TextInput style={styles.input} maxLength={20} value={name} onChangeText={setName} />
+      <Text style={styles.h2}>Colour</Text>
+      <ColourPicker value={colour} onChange={setColour} />
+      <Text style={styles.h2}>Personality (pick up to 2)</Text>
+      <TraitPicker value={traits} onChange={setTraits} />
+      <Button
+        title="Save"
+        disabled={!name.trim()}
+        onPress={() => {
+          onSave({ name: name.trim(), colour, traits });
+          setEditing(false);
+        }}
+      />
+      <Button kind="secondary" title="Cancel" onPress={() => setEditing(false)} />
+    </Card>
+  );
+}
+
 export default function AnimalScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { world, dispatch } = useGame();
@@ -59,10 +113,20 @@ export default function AnimalScreen() {
           {species.name} · {species.rarity} · bond {animal.bond}
         </Text>
         <Text style={[styles.body, { textAlign: 'center' }]}>{species.personality}</Text>
+        {(animal.traits ?? []).map((t) => (
+          <Text key={t} style={[styles.body, { textAlign: 'center' }]}>
+            {TRAITS[t].emoji} <Text style={{ fontWeight: '600' }}>{TRAITS[t].name}:</Text> {TRAITS[t].description}
+          </Text>
+        ))}
         <Text style={styles.quiet}>
           Delivers in about {formatDuration(deliveryDuration(animal))} · {Math.round(mishapChance(animal) * 100)}% mishap risk
         </Text>
       </Card>
+
+      <CustomiseCard
+        animal={animal}
+        onSave={(c) => dispatch({ type: 'customise', animalId: animal.id, ...c })}
+      />
 
       <Card>
         <Meter label="Food" value={animal.meters.hunger} />

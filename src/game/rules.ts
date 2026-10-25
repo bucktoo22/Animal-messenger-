@@ -1,6 +1,7 @@
 // Pure game rules. No React or device APIs here, so these can move to the server unchanged.
 import { EGG_ODDS, SPECIES, SPECIES_LIST } from './species';
-import type { Animal, Egg, FoodId, Message, Meters, Rarity } from './types';
+import { randomTraits, traitBonus, traitFactor, validTraits } from './traits';
+import type { Animal, Egg, FoodId, Message, Meters, Rarity, TraitId } from './types';
 
 export type Rng = () => number;
 
@@ -22,9 +23,9 @@ export function updateMeters(animal: Animal, now: number): Animal {
   if (hours === 0) return animal;
   const m = animal.meters;
   const meters: Meters = {
-    hunger: clamp(m.hunger - 4 * hours),
-    happiness: clamp(m.happiness - 3 * hours),
-    energy: clamp(animal.busyWith ? m.energy : m.energy + 10 * hours),
+    hunger: clamp(m.hunger - 4 * traitFactor(animal, 'hungerRate') * hours),
+    happiness: clamp(m.happiness - 3 * traitFactor(animal, 'happinessRate') * hours),
+    energy: clamp(animal.busyWith ? m.energy : m.energy + 10 * traitFactor(animal, 'energyRate') * hours),
   };
   return { ...animal, meters, metersUpdatedAt: now };
 }
@@ -34,7 +35,7 @@ export function feed(animal: Animal, food: FoodId, now: number): Animal {
   const favourite = SPECIES[a.speciesId].favouriteFood === food;
   return {
     ...a,
-    meters: { ...a.meters, hunger: clamp(a.meters.hunger + (favourite ? 40 : 25)) },
+    meters: { ...a.meters, hunger: clamp(a.meters.hunger + (favourite ? 40 : 25) + traitBonus(a, 'foodBonus')) },
     bond: a.bond + 1,
   };
 }
@@ -50,7 +51,7 @@ export function play(animal: Animal, now: number): Animal {
     ...a,
     meters: {
       ...a.meters,
-      happiness: clamp(a.meters.happiness + 30),
+      happiness: clamp(a.meters.happiness + 30 + traitBonus(a, 'playBonus')),
       energy: clamp(a.meters.energy - PLAY_ENERGY_COST),
     },
     bond: a.bond + 2,
@@ -61,12 +62,12 @@ function moodAverage(m: Meters): number {
   return (m.hunger + m.energy + m.happiness) / 3;
 }
 
-/** One-way trip time in ms. Bond makes animals up to 25% faster; a grumpy animal is 30% slower. */
+/** One-way trip time in ms. Bond makes animals up to 25% faster; a grumpy animal is 30% slower; traits adjust it. */
 export function deliveryDuration(animal: Animal): number {
   const base = SPECIES[animal.speciesId].deliveryMinutes * MINUTE;
   const bondBonus = 1 - Math.min(animal.bond, 50) / 200;
   const moodPenalty = moodAverage(animal.meters) < 40 ? 1.3 : 1;
-  return Math.round(base * bondBonus * moodPenalty);
+  return Math.round(base * bondBonus * moodPenalty * traitFactor(animal, 'speed'));
 }
 
 /** Chance (0 to 0.9) the trip goes wrong. Hungry or tired animals are clumsier; bond helps. */
@@ -76,6 +77,7 @@ export function mishapChance(animal: Animal): number {
   if (animal.meters.hunger < 30) factor += 0.5;
   if (animal.meters.energy < 30) factor += 0.5;
   factor *= Math.max(0.5, 1 - animal.bond / 100);
+  factor *= traitFactor(animal, 'mishap');
   return Math.min(0.9, s.baseMishapChance * factor);
 }
 
@@ -85,7 +87,8 @@ export function canSend(animal: Animal): boolean {
 
 function rollMishap(animal: Animal, start: number, duration: number, rng: Rng, chanceScale = 1) {
   if (rng() >= mishapChance(animal) * chanceScale) return null;
-  const kind: 'lost' | 'dropped' = rng() < SPECIES[animal.speciesId].lostShare ? 'lost' : 'dropped';
+  const lostShare = Math.min(1, SPECIES[animal.speciesId].lostShare * traitFactor(animal, 'lost'));
+  const kind: 'lost' | 'dropped' = rng() < lostShare ? 'lost' : 'dropped';
   // Mishaps happen somewhere between 30% and 80% of the way.
   return { kind, at: start + Math.round(duration * (0.3 + 0.5 * rng())) };
 }
@@ -236,14 +239,18 @@ export function hatchEgg(params: {
   id: string;
   name: string;
   colour: string;
+  /** Chosen traits, or random ones when left out. */
+  traits?: TraitId[];
   now: number;
   rng: Rng;
 }): Animal {
   const { egg, rng } = params;
+  const traits = params.traits ?? randomTraits(rng);
+  if (!validTraits(traits)) throw new Error('Pick up to two traits that go together');
   const options = SPECIES_LIST.filter((s) => s.rarity === egg.rarity);
   const pool = options.length ? options : SPECIES_LIST.filter((s) => s.rarity === 'common');
   const species = pool[Math.floor(rng() * pool.length)];
-  return newAnimal({ id: params.id, speciesId: species.id, name: params.name, colour: params.colour, now: params.now });
+  return newAnimal({ id: params.id, speciesId: species.id, name: params.name, colour: params.colour, traits, now: params.now });
 }
 
 export function newAnimal(params: {
@@ -251,11 +258,13 @@ export function newAnimal(params: {
   speciesId: Animal['speciesId'];
   name: string;
   colour: string;
+  traits?: TraitId[];
   now: number;
 }): Animal {
-  const { now, ...rest } = params;
+  const { now, traits = [], ...rest } = params;
   return {
     ...rest,
+    traits,
     meters: { hunger: 80, energy: 100, happiness: 80 },
     metersUpdatedAt: now,
     bond: 0,

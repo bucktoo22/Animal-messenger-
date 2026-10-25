@@ -15,7 +15,8 @@ import {
   type Rng,
 } from './rules';
 import { SPECIES_LIST } from './species';
-import type { Animal, Egg, FoodId, Friend, Message } from './types';
+import { validTraits } from './traits';
+import type { Animal, Egg, FoodId, Friend, Message, TraitId } from './types';
 
 export const PLAYER_ID = 'me';
 
@@ -37,7 +38,8 @@ export type Action =
   | { type: 'send'; animalId: string; to: string; text: string }
   | { type: 'redirect'; messageId: string; newText?: string; newTo?: string }
   | { type: 'resend'; messageId: string; animalId: string; newText?: string }
-  | { type: 'hatch'; eggId: string; name: string; colour: string }
+  | { type: 'hatch'; eggId: string; name: string; colour: string; traits?: TraitId[] }
+  | { type: 'customise'; animalId: string; name?: string; colour?: string; traits?: TraitId[] }
   | { type: 'read'; messageId: string }
   | { type: 'skip'; ms: number };
 
@@ -85,9 +87,11 @@ export function createWorld(env: Env): World {
   return {
     version: 1,
     animals: [
-      newAnimal({ id: newId(), speciesId: 'pigeon', name: 'Pip', colour: '#B0A8A0', now }),
-      newAnimal({ id: newId(), speciesId: 'tortoise', name: 'Shelly', colour: '#8AB17D', now }),
-      newAnimal({ id: newId(), speciesId: 'duckling', name: 'Waddles', colour: '#F7DC6F', now }),
+      newAnimal({ id: newId(), speciesId: 'pigeon', name: 'Pip', colour: '#B0A8A0', traits: ['speedy'], now }),
+      newAnimal({ id: newId(), speciesId: 'tortoise', name: 'Shelly', colour: '#8AB17D', traits: ['careful', 'cheerful'], now }),
+      newAnimal({ id: newId(), speciesId: 'duckling', name: 'Waddles', colour: '#F7DC6F', traits: ['clumsy', 'curious'], now }),
+      newAnimal({ id: newId(), speciesId: 'dog', name: 'Biscuit', colour: '#F4A261', traits: ['playful', 'brave'], now }),
+      newAnimal({ id: newId(), speciesId: 'cat', name: 'Mittens', colour: '#7FB3D5', traits: ['sleepy', 'foodie'], now }),
     ],
     messages: [welcome],
     eggs: [{ id: newId(), rarity: 'common', foundAt: now }],
@@ -102,7 +106,8 @@ function replaceById<T extends { id: string }>(list: T[], item: T): T[] {
 }
 
 function demoReply(friendId: string, env: Env): Message {
-  const carrier = SPECIES_LIST.filter((s) => s.deliveryMinutes <= 120)[Math.floor(env.rng() * 4)] ?? SPECIES_LIST[0];
+  const quick = SPECIES_LIST.filter((s) => s.deliveryMinutes <= 120);
+  const carrier = quick[Math.floor(env.rng() * quick.length)] ?? SPECIES_LIST[0];
   const travel = carrier.deliveryMinutes * MINUTE;
   return {
     id: env.newId(),
@@ -230,12 +235,33 @@ export function reduce(world: World, action: Action, env: Env): World {
     case 'hatch': {
       const egg = world.eggs.find((e) => e.id === action.eggId);
       if (!egg) throw new Error(`No egg ${action.eggId}`);
-      const hatched = hatchEgg({ egg, id: env.newId(), name: action.name, colour: action.colour, now, rng });
+      const hatched = hatchEgg({
+        egg,
+        id: env.newId(),
+        name: action.name,
+        colour: action.colour,
+        traits: action.traits,
+        now,
+        rng,
+      });
       return {
         ...world,
         animals: [...world.animals, hatched],
         eggs: world.eggs.filter((e) => e.id !== egg.id),
       };
+    }
+
+    case 'customise': {
+      const a = animal(action.animalId);
+      const name = action.name?.trim();
+      if (action.traits && !validTraits(action.traits)) throw new Error('Pick up to two traits that go together');
+      const updated: Animal = {
+        ...a,
+        name: name || a.name,
+        colour: action.colour ?? a.colour,
+        traits: action.traits ?? a.traits,
+      };
+      return { ...world, animals: replaceById(world.animals, updated) };
     }
 
     case 'read':

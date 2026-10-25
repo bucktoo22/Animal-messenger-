@@ -5,7 +5,7 @@ import { SPECIES } from '../../game/species';
 import type { Animal, Message } from '../../game/types';
 import type { World } from '../../game/world';
 import { useGame } from '../../state/GameProvider';
-import { AnimalAvatar, Button, Card, Meter, formatDuration, styles } from '../../ui/components';
+import { AnimalAvatar, Button, Card, Meter, formatDuration, styles, traitLabel } from '../../ui/components';
 
 function statusLine(animal: Animal, world: World, now: number): string {
   if (!animal.busyWith) return 'At home';
@@ -40,6 +40,7 @@ export default function AnimalsScreen() {
                   <Text style={styles.quiet}>
                     {SPECIES[a.speciesId].name} · {SPECIES[a.speciesId].rarity} · bond {a.bond}
                   </Text>
+                  {a.traits?.length ? <Text style={styles.quiet}>{traitLabel(a.traits)}</Text> : null}
                   <Text style={styles.quiet}>{statusLine(a, world, now)}</Text>
                 </View>
               </View>
