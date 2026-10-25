@@ -97,13 +97,31 @@ export function AnimatedAnimal({
  * The animal on a delivery path: a little waddle while travelling, a nervous shake when in trouble.
  * Flipped so it faces the way it walks (most animal emojis face left).
  */
-export function TravellingAnimal({ emoji, trouble, style }: { emoji: string; trouble?: boolean; style?: StyleProp<TextStyle> }) {
-  const step = useLoop(trouble ? 240 : 700);
+export function TravellingAnimal({
+  emoji,
+  trouble,
+  walking = true,
+  faceRight = true,
+  style,
+}: {
+  emoji: string;
+  trouble?: boolean;
+  /** False stands still (no waddle). */
+  walking?: boolean;
+  faceRight?: boolean;
+  style?: StyleProp<TextStyle>;
+}) {
+  const step = useLoop(trouble ? 240 : 700, walking || !!trouble);
   const rotate = step.interpolate({ inputRange: [0, 1], outputRange: trouble ? ['0deg', '0deg'] : ['-10deg', '10deg'] });
   const shake = step.interpolate({ inputRange: [0, 1], outputRange: trouble ? [-3, 3] : [0, 0] });
   const bounce = step.interpolate({ inputRange: [0, 0.5, 1], outputRange: trouble ? [0, 0, 0] : [0, -3, 0] });
   return (
-    <Animated.Text style={[style, { transform: [{ translateX: shake }, { translateY: bounce }, { rotate }, { scaleX: -1 }] }]}>
+    <Animated.Text
+      style={[
+        style,
+        { transform: [{ translateX: shake }, { translateY: bounce }, { rotate }, { scaleX: faceRight ? -1 : 1 }] },
+      ]}
+    >
       {emoji}
     </Animated.Text>
   );

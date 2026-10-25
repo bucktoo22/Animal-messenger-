@@ -58,6 +58,28 @@ export function play(animal: Animal, now: number): Animal {
   };
 }
 
+export const WALK_ENERGY_COST = 10;
+
+export function canWalk(animal: Animal): boolean {
+  return !animal.busyWith && animal.meters.energy >= WALK_ENERGY_COST;
+}
+
+/** A walk the player steered. Every treat found makes it better; every third adds bond. */
+export function walk(animal: Animal, treats: number, now: number): Animal {
+  const a = updateMeters(animal, now);
+  if (!canWalk(a)) return a;
+  const found = Math.max(0, Math.floor(treats));
+  return {
+    ...a,
+    meters: {
+      ...a.meters,
+      happiness: clamp(a.meters.happiness + Math.min(40, 10 + 5 * found)),
+      energy: clamp(a.meters.energy - WALK_ENERGY_COST),
+    },
+    bond: a.bond + 1 + Math.floor(found / 3),
+  };
+}
+
 function moodAverage(m: Meters): number {
   return (m.hunger + m.energy + m.happiness) / 3;
 }

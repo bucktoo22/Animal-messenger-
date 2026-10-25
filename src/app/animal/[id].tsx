@@ -1,7 +1,7 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { canPlay, deliveryDuration, mishapChance } from '../../game/rules';
+import { canPlay, canWalk, deliveryDuration, mishapChance } from '../../game/rules';
 import { FOODS, SPECIES } from '../../game/species';
 import { TRAITS } from '../../game/traits';
 import type { Animal, FoodId, TraitId } from '../../game/types';
@@ -165,11 +165,19 @@ export default function AnimalScreen() {
             }}
           />
         ) : (
-          <Button
-            title={busy ? 'Out delivering' : canPlay(animal) ? 'Play fetch' : 'Too tired to play'}
-            onPress={() => setPlaying(true)}
-            disabled={!canPlay(animal)}
-          />
+          <>
+            <Button
+              title={busy ? 'Out delivering' : canWalk(animal) ? `Take ${animal.name} for a walk` : 'Too tired for a walk'}
+              onPress={() => router.push(`/walk/${animal.id}`)}
+              disabled={!canWalk(animal)}
+            />
+            <Button
+              kind="secondary"
+              title={busy ? 'Out delivering' : canPlay(animal) ? 'Play fetch' : 'Too tired to play'}
+              onPress={() => setPlaying(true)}
+              disabled={!canPlay(animal)}
+            />
+          </>
         )}
       </Card>
 

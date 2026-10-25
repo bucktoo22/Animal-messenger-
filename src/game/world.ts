@@ -7,6 +7,7 @@ import {
   hatchEgg,
   newAnimal,
   play,
+  walk,
   redirectFound,
   resendMessage,
   rollEggRarity,
@@ -35,6 +36,7 @@ export type Action =
   | { type: 'tick' }
   | { type: 'feed'; animalId: string; food: FoodId }
   | { type: 'play'; animalId: string }
+  | { type: 'walk'; animalId: string; treats: number }
   | { type: 'send'; animalId: string; to: string; text: string }
   | { type: 'redirect'; messageId: string; newText?: string; newTo?: string }
   | { type: 'resend'; messageId: string; animalId: string; newText?: string }
@@ -183,6 +185,9 @@ export function reduce(world: World, action: Action, env: Env): World {
 
     case 'play':
       return { ...world, animals: replaceById(world.animals, play(animal(action.animalId), now)) };
+
+    case 'walk':
+      return { ...world, animals: replaceById(world.animals, walk(animal(action.animalId), action.treats, now)) };
 
     case 'send': {
       const sent = sendMessage({

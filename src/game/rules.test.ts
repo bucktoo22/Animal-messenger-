@@ -11,6 +11,7 @@ import {
   newAnimal,
   play,
   redirectFound,
+  walk,
   rollEggRarity,
   sendMessage,
   updateMeters,
@@ -48,6 +49,21 @@ describe('care', () => {
     const after = play(a, T0);
     expect(after.meters.happiness).toBe(70);
     expect(after.meters.energy).toBe(40);
+  });
+});
+
+describe('walks', () => {
+  it('finding treats makes a walk better and builds bond', () => {
+    const a = { ...pigeon(), meters: { hunger: 80, energy: 50, happiness: 20 } };
+    expect(walk(a, 0, T0).meters).toEqual({ hunger: 80, energy: 40, happiness: 30 });
+    const good = walk(a, 6, T0);
+    expect(good.meters.happiness).toBe(60);
+    expect(good.bond).toBe(3);
+  });
+
+  it("can't walk an animal that is out or worn out", () => {
+    const tired = { ...pigeon(), meters: { hunger: 80, energy: 5, happiness: 20 } };
+    expect(walk(tired, 3, T0)).toEqual(tired);
   });
 });
 
